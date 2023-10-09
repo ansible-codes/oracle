@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAML to Table</title>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@3.14.1/dist/js-yaml.min.js"></script>
+</head>
+<body>
+
+<table border="1" id="yamlTable">
+    <thead>
+        <tr>
+            <th>Key</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+
+<script>
+    async function fetchYAMLAndDisplay() {
+        try {
+            // Fetch the YAML file
+            const response = await fetch('https://bitbucket/main.yaml');
+            const yamlText = await response.text();
+
+            // Parse the YAML
+            const data = jsyaml.load(yamlText);
+
+            // Populate the table
+            const tbody = document.querySelector('#yamlTable tbody');
+            for (let key in data) {
+                const value = data[key];
+
+                const row = document.createElement('tr');
+                const keyCell = document.createElement('td');
+                const valueCell = document.createElement('td');
+
+                keyCell.textContent = key;
+                valueCell.textContent = value;
+
+                row.appendChild(keyCell);
+                row.appendChild(valueCell);
+
+                tbody.appendChild(row);
+            }
+        } catch (error) {
+            console.error('Error fetching and parsing the YAML:', error);
+        }
+    }
+
+    // Execute the function on page load
+    window.addEventListener('DOMContentLoaded', fetchYAMLAndDisplay);
+</script>
+
+</body>
+</html>
