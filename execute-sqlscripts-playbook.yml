@@ -14,13 +14,18 @@
         dest: '/tmp/deployment'
         clone: yes
         update: yes
+
+    - name: Read properties file
+      include_vars:
+        file: '/path/to/oracle.host.properties'
+        name: properties_vars
       
     - name: Execute SQL script on Oracle DB
       oracle_sql:
-        hostname: "your_oracle_host"
-        port: "your_oracle_port"
-        service_name: "your_service_name"
-        user: "your_oracle_user"
-        password: "your_oracle_password"
+        hostname: "{{ properties_vars.oracle_host }}"
+        port: "{{ properties_vars.oracle_port }}"
+        service_name: "{{ properties_vars.oracle_service_name }}"
+        user: "{{ oracle_user }}"
+        password: "{{ oracle_pass }}"
         sql: "{{ lookup('file', '/tmp/deployment/{{ sql_file_name }}') }}"
       when: sql_file_name is defined and sql_file_name != ''
