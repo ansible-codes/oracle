@@ -1,0 +1,35 @@
+---
+- hosts: oracle_hosts
+  vars:
+    bitbucket_base_url: "https://api.bitbucket.org/2.0/repositories/YOUR_ORG/YOUR_REPO/src/master/oracle/scripts"
+    tns_entry: "MYDB"  # The name of your TNS entry; you might want to pass this as a variable too.
+
+  tasks:
+  - name: Retrieve Oracle SQL script from Bitbucket
+    uri:
+      url: "{{ bitbucket_base_url }}/{{ script_name }}"
+      method: GET
+      headers:
+        Authorization: "Bearer YOUR_ACCESS_TOKEN"
+      return_content: yes
+    register: sql_script_content
+
+  - name: Extract Oracle details from tns.names file
+    shell: "cat /path/to/tns.names | grep -A 5 '{{ tns_entry }} ='"
+    register: tns_details
+
+  # You will need to parse the tns_details variable to extract the hostname, port, etc.
+  # Here's a very simple extraction assuming a specific format; adjust as needed.
+  - set_fact:
+      oracle_hostname: "{{ tns_details.stdout | regex_search('HOST = ([^)]+)', '\\1') }}"
+      oracle_port: "{{ tns_details.stdout | regex_search('PORT = ([^)]+)', '\\1') }}"
+      oracle_service_name: "{{ tns_details.stdout | regex_search('SERVICE_NAME = ([^)]+)', '\\1') }}"
+
+  - name: Execute the SQL script on Oracle database
+    oracle_sql:
+      username: "user"
+      password: "password"
+      hostname: "{{ oracle_hostname }}"
+      port: "{{ oracle_port }}"
+      service_name: "{{ oracle_service_name }}"
+      sql: "{{ sql_script_content.content }}"
