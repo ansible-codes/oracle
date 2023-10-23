@@ -1,0 +1,26 @@
+---
+- name: Run SQL script on Oracle DB from Bitbucket
+  hosts: localhost
+  gather_facts: no
+  vars_prompt:
+    - name: "sql_file_name"
+      prompt: "Enter the .sql file name to execute"
+      private: no
+
+  tasks:
+    - name: Clone the Bitbucket repository
+      git:
+        repo: 'https://bitbucket.org/YourUsername/YourRepo.git'
+        dest: '/tmp/deployment'
+        clone: yes
+        update: yes
+      
+    - name: Execute SQL script on Oracle DB
+      oracle_sql:
+        hostname: "your_oracle_host"
+        port: "your_oracle_port"
+        service_name: "your_service_name"
+        user: "your_oracle_user"
+        password: "your_oracle_password"
+        sql: "{{ lookup('file', '/tmp/deployment/{{ sql_file_name }}') }}"
+      when: sql_file_name is defined and sql_file_name != ''
