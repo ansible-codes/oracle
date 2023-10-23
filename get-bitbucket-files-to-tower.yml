@@ -1,0 +1,21 @@
+---
+- name: Retrieve file from Bitbucket repository
+  hosts: localhost
+  vars_prompt:
+    - name: "file_name"
+      prompt: "Enter the file name to retrieve"
+      private: no
+
+  tasks:
+    - name: Clone the Bitbucket repository
+      git:
+        repo: 'https://bitbucket.org/Test/deployment.git'
+        dest: '/tmp/deployment'
+        clone: yes
+        update: yes
+
+    - name: Copy the specified file to a desired location
+      copy:
+        src: "/tmp/deployment/oracle/{{ file_name }}"
+        dest: "/destination/path/{{ file_name }}"
+      when: file_name is defined and file_name != ''
