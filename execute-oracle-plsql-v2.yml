@@ -1,18 +1,35 @@
 ---
-- name: Execute Oracle PL/SQL Scripts
+- name: Execute Oracle PL/SQL Scripts from Bitbucket
   hosts: oracle_servers
   tasks:
-    - name: Execute Oracle Script
+    - name: Clone Bitbucket repository from specified branch
+      git:
+        repo: 'https://bitbucket/oracle/scripts.git'
+        dest: '/tmp/oracle_scripts'
+        version: "{{ branch_name }}"
+      delegate_to: localhost
+      become: yes
+      register: git_clone
+
+    - name: Execute Oracle Script when repo changes or is newly cloned
       oracle_sql:
         hostname: "{{ oracle_host }}"
         port: "{{ oracle_port }}"
         service_name: "{{ oracle_service_name }}"
         user: "{{ oracle_user }}"
         password: "{{ oracle_password }}"
-        sql: "{{ lookup('file', script_path + '/' + script_name) }}"
+        sql: "{{ lookup('file', '/tmp/oracle_scripts/' + script_name) }}"
+      when: git_clone.changed
       delegate_to: localhost
       register: result
 
     - name: Print SQL execution result
       debug:
         msg: "{{ result }}"
+
+    - name: Clean up and delete /tmp/oracle_scripts directory
+      file:
+        path: "/tmp/oracle_scripts"
+        state: absent
+      delegate_to: localhost
+      become: yes
