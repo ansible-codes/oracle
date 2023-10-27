@@ -1,0 +1,18 @@
+---
+- name: Execute Oracle PL/SQL Scripts
+  hosts: oracle_servers
+  tasks:
+    - name: Execute Oracle Script
+      oracle_sql:
+        hostname: "{{ oracle_host }}"
+        port: "{{ oracle_port }}"
+        service_name: "{{ oracle_service_name }}"
+        user: "{{ oracle_user }}"
+        password: "{{ oracle_password }}"
+        sql: "{{ lookup('file', script_path + '/' + script_name) }}"
+      delegate_to: localhost
+      register: result
+
+    - name: Print SQL execution result
+      debug:
+        msg: "{{ result }}"
