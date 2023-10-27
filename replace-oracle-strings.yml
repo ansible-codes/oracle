@@ -1,0 +1,26 @@
+---
+- hosts: localhost
+  gather_facts: no
+  tasks:
+
+  - name: Ensure the file exists
+    stat:
+      path: "/path/to/main.yml"
+    register: result
+
+  - name: Exit if file doesn't exist
+    fail:
+      msg: "The file main.yml does not exist."
+    when: not result.stat.exists
+
+  - name: Replace within the #sql block
+    lineinfile:
+      path: "/path/to/main.yml"
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+      backrefs: yes
+    loop:
+      - { regexp: '^(#sql.*\nhost:).*$', line: '\1 {{ host_var }}' }
+      - { regexp: '^(#sql.*\nport:).*$', line: '\1 {{ port_var }}' }
+      - { regexp: '^(#sql.*\nservicename:).*$', line: '\1 {{ servicename_var }}' }
+      - { regexp: '^(#sql.*\nusername:).*$', line: '\1 {{ username_var }}' }
