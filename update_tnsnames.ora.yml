@@ -1,0 +1,24 @@
+---
+- name: Update tnsnames.ora file
+  hosts: "{{ target_host }}"
+  vars:
+    target_host: "your_host"
+
+  tasks:
+    - name: Create backup of tnsnames.ora
+      copy:
+        src: /app/oracle/tnsnames.ora
+        dest: /app/oracle/tnsnames.ora.bkp
+
+    - name: Check if the first and second lines contain '#'
+      command: sed -n '1,2p' /app/oracle/tnsnames.ora
+      register: first_two_lines
+
+    - name: Remove the first 14 lines from tnsnames.ora
+      blockinfile:
+        path: /app/oracle/tnsnames.ora
+        marker: ""
+        block: ""
+        insertafter: 14
+        state: present
+      when: "'#' in first_two_lines.stdout"
