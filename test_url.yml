@@ -1,0 +1,23 @@
+- name: Test URL availability
+  hosts: localhost
+  vars:
+    test_url: "http://example.com" # Replace with your URL
+
+  tasks:
+    - name: Check if the URL is accessible
+      uri:
+        url: "{{ test_url }}"
+        method: GET
+        status_code: 200
+      register: result
+      ignore_errors: yes
+
+    - name: Output result
+      debug:
+        msg: "URL {{ test_url }} is accessible."
+      when: result.status == 200
+
+    - name: Output error message
+      debug:
+        msg: "URL {{ test_url }} is not accessible."
+      when: result.status != 200
