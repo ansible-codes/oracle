@@ -1,0 +1,24 @@
+- name: Update tnsnames.ora file
+  hosts: remote_host
+  vars:
+    file_path: /app/oracle/tnsnames.ora
+
+  tasks:
+    - name: Check conditions in tnsnames.ora file
+      shell: |
+        line_count=$(wc -l < {{ file_path }})
+        hash_count=$(head -14 {{ file_path }} | grep -c '^#')
+        if [[ $line_count -eq 28 ]] && [[ $hash_count -eq 14 ]]; then
+            sed -i '1,14d' {{ file_path }}
+            echo 'tnsnames.ora is updated.'
+        elif [[ $line_count -eq 14 ]]; then
+            echo 'tnsnames.ora is not updated, please check.'
+        else
+            echo 'Condition not met, no action taken.'
+        fi
+      register: result
+      ignore_errors: yes
+
+    - name: Output result
+      debug:
+        msg: "{{ result.stdout_lines }}"
