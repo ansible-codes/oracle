@@ -1,0 +1,42 @@
+- name: Test Oracle DB Connection
+  hosts: all
+  gather_facts: no
+
+  vars_prompt:
+    - name: database_username
+      prompt: "Enter DB username"
+      private: no
+
+    - name: database_password
+      prompt: "Enter DB password"
+      private: yes
+
+    - name: database_host
+      prompt: "Enter DB hostname"
+      private: no
+
+    - name: database_port
+      prompt: "Enter DB port"
+      private: no
+      default: "49125"  # Default Oracle DB port
+
+    - name: database_service_name
+      prompt: "Enter DB service name"
+      private: no
+
+  tasks:
+    - name: Test Oracle DB connection
+      shell: |
+        echo "SELECT 1 FROM DUAL;" | sqlplus -S {{ database_username }}/{{ database_password }}@//{{ database_host }}:{{ database_port }}/{{ database_service_name }}
+      register: db_test
+      ignore_errors: yes
+
+    - name: Check if connection was successful
+      debug:
+        msg: "Connection successful"
+      when: db_test.rc == 0
+
+    - name: Connection failed
+      debug:
+        msg: "Connection failed"
+      when: db_test.rc != 0
