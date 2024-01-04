@@ -1,0 +1,17 @@
+- name: Backup and Modify tnsnames.ora File
+  hosts: all
+ #become: yes  # Use become if you need root privileges
+  tasks:
+    - name: Create backup of /app/oracle/tnsnames.ora
+      ansible.builtin.copy:
+        src: /app/oracle/tnsnames.ora
+        dest: /app/oracle/tnsnames.ora.bkp
+        remote_src: yes
+      #become: yes
+
+    - name: Remove lines starting with #
+      ansible.builtin.lineinfile:
+        path: /app/oracle/tnsnames.ora
+        regexp: '^#.*'
+        state: absent
+      #become: yes
