@@ -94,19 +94,14 @@ Function ParseIPs(output)
         If foundNonAuthAnswer Then
             If InStr(line, "Addresses:") > 0 Then
                 isMultiple = True
-                Continue For
-            End If
-
-            If InStr(line, "Address:") > 0 Then
+            ElseIf InStr(line, "Address:") > 0 Then
                 If isMultiple Then
-                    Continue For ' Skip the first Address line in multiple addresses scenario
+                    ' This is the first Address line in multiple addresses scenario, so skip it
                 Else
                     ParseIPs = Trim(Mid(line, InStr(line, "Address:") + 9))
                     Exit Function
                 End If
-            End If
-
-            If isMultiple And Trim(line) <> "" And InStr(line, ":") = 0 Then
+            ElseIf isMultiple And Trim(line) <> "" And InStr(line, ":") = 0 Then
                 ipList = ipList & Trim(line) & ", "
             End If
         End If
