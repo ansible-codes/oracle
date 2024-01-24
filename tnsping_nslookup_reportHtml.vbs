@@ -1,63 +1,79 @@
 Const ForReading = 1
 Const ForWriting = 2
-Dim shell, fso, tnspingOutput, nslookupOutput, dbName, host, port, ip, htmlContent, dbFile, dbNames, progressMessage, i
+Dim shell, fso, tnspingOutput, nslookupOutput, dbName, host, port, ip, htmlContent, dbFile, dbNames, progressMessage, i, fileName
 
 Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
-' Check if dbnames.txt exists
-If Not fso.FileExists("dbnames.txt") Then
-    WScript.Echo "dbnames.txt not found."
-    WScript.Quit
-End If
-
-' Read dbnames.txt file
-Set dbFile = fso.OpenTextFile("dbnames.txt", ForReading)
-dbNames = Split(dbFile.ReadAll, vbCrLf)
-dbFile.Close
-
 ' Start HTML content
-htmlContent = "<html><body><table border='1'><tr><th>DB Name</th><th>HOST</th><th>PORT</th><th>HOST IP</th></tr>"
+htmlContent = "<html><body>"
 
-For i = 0 To UBound(dbNames)
-    dbName = dbNames(i)
-
-    ' Update and show progress
-    progressMessage = "Processing Databases:" & vbCrLf
-    For j = 0 To UBound(dbNames)
-        If j = i Then
-            progressMessage = progressMessage & dbNames(j) & " ******" & vbCrLf
-        Else
-            progressMessage = progressMessage & dbNames(j) & vbCrLf
-        End If
-    Next
-    shell.Popup progressMessage, 2, "Progress", 64
-
-    ' Executing tnsping
-    Set tnspingExec = shell.Exec("tnsping " & dbName)
-    tnspingOutput = tnspingExec.StdOut.ReadAll()
-
-    ' Parsing the tnsping output to find HOST and PORT
-    host = ParseValue(tnspingOutput, "HOST=")
-    port = ParseValue(tnspingOutput, "PORT=")
-
-    If host <> "" Then
-        ' Executing nslookup
-        Set nslookupExec = shell.Exec("cmd /c nslookup " & host)
-        nslookupOutput = nslookupExec.StdOut.ReadAll()
-
-        ' Parsing the nslookup output to find the second IP address
-        ip = ParseSecondIP(nslookupOutput)
-    Else
-        ip = "Host not found"
+' Process each file
+For Each fileName In Array("griffinDBnames.txt", "griffinAnalyticsDBnames.txt")
+    If Not fso.FileExists(fileName) Then
+        WScript.Echo fileName & " not found."
+        WScript.Quit
     End If
 
-    ' Adding row to HTML content
-    htmlContent = htmlContent & "<tr><td>" & dbName & "</td><td>" & host & "</td><td>" & port & "</td><td>" & ip & "</td></tr>"
+    ' Read dbnames file
+    Set dbFile = fso.OpenTextFile(fileName, ForReading)
+    dbNames = Split(dbFile.ReadAll, vbCrLf)
+    dbFile.Close
+
+    ' Add table header
+    htmlContent = htmlContent & "<table id='" & fileName & "' border='1'><tr><th>DB Name</th><th>HOST</th><th>PORT</th><th>HOST IP</th></tr>"
+
+    For i = 0 To UBound(dbNames)
+        dbName = dbNames(i)
+
+        ' Update and show progress
+        progressMessage = "Processing " & fileName & ": " & vbCrLf & dbName & " ******" & vbCrLf
+        shell.Popup progressMessage, 2, "Progress", 64
+
+        ' Executing tnsping
+        Set tnspingExec = shell.Exec("tnsping " & dbName)
+        tnspingOutput = tnspingExec.StdOut.ReadAll()
+
+        ' Parsing the tnsping output to find HOST and PORT
+        host = ParseValue(tnspingOutput, "HOST=")
+        port = ParseValue(tnspingOutput, "PORT=")
+
+        If host <> "" Then
+            ' Executing nslookup
+            Set nslookupExec = shell.Exec("cmd /c nslookup " & host)
+            nslookupOutput = nslookupExec.StdOut.ReadAll()
+
+            ' Parsing the nslookup output to find the second IP address
+            ip = ParseSecondIP(nslookupOutput)
+        Else
+            ip = "Host not found"
+        End If
+
+        ' Adding row to HTML content
+        htmlContent = htmlContent & "<tr><td>" & dbName & "</td><td>" & host & "</td><td>" & port & "</td><td>" & ip & "</td></tr>"
+    Next
+
+    ' Close table
+    htmlContent = htmlContent & "</table><br>"
 Next
 
+' Add copy button
+htmlContent = htmlContent & "<button onclick='copyTables()'>Copy Tables</button>"
+
+' Add script to copy tables content
+htmlContent = htmlContent & "<script>"
+htmlContent = htmlContent & "function copyTables() {"
+htmlContent = htmlContent & "    var range = document.createRange();"
+htmlContent = htmlContent & "    range.selectNode(document.body);"
+htmlContent = htmlContent & "    window.getSelection().removeAllRanges();"
+htmlContent = htmlContent & "    window.getSelection().addRange(range);"
+htmlContent = htmlContent & "    document.execCommand('copy');"
+htmlContent = htmlContent & "    alert('Tables copied!');"
+htmlContent = htmlContent & "}"
+htmlContent = htmlContent & "</script>"
+
 ' Finish HTML content
-htmlContent = htmlContent & "</table></body></html>"
+htmlContent = htmlContent & "</body></html>"
 
 ' Writing to an HTML file
 Dim htmlFile
