@@ -80,34 +80,22 @@ Function ParseValue(output, key)
 End Function
 
 Function ParseIPs(output)
-    Dim lines, line, foundNonAuthAnswer, ipList, isMultiple
+    Dim lines, line, foundNonAuthAnswer, ipList
     lines = Split(output, vbCrLf)
     ParseIPs = ""
     foundNonAuthAnswer = False
-    isMultiple = False
 
     For Each line in lines
         If InStr(line, "Non-authoritative answer") > 0 Then
             foundNonAuthAnswer = True
-        End If
-
-        If foundNonAuthAnswer Then
-            If InStr(line, "Addresses:") > 0 Then
-                isMultiple = True
-            ElseIf InStr(line, "Address:") > 0 Then
-                If isMultiple Then
-                    ' This is the first Address line in multiple addresses scenario, so skip it
-                Else
-                    ParseIPs = Trim(Mid(line, InStr(line, "Address:") + 9))
-                    Exit Function
-                End If
-            ElseIf isMultiple And Trim(line) <> "" And InStr(line, ":") = 0 Then
-                ipList = ipList & Trim(line) & ", "
+        ElseIf foundNonAuthAnswer Then
+            If InStr(line, "Address:") > 0 Then
+                ipList = ipList & Trim(Mid(line, InStr(line, "Address:") + 9)) & ", "
             End If
         End If
     Next
 
-    If isMultiple And Len(ipList) > 0 Then
+    If Len(ipList) > 0 Then
         ' Remove trailing comma and space
         ParseIPs = Left(ipList, Len(ipList) - 2)
     End If
