@@ -1,6 +1,6 @@
 Const ForReading = 1
 Const ForWriting = 2
-Dim shell, fso, tnspingOutput, nslookupOutput, dbName, host, port, ip, htmlContent, dbFile, progressBox
+Dim shell, fso, tnspingOutput, nslookupOutput, dbName, host, port, ip, htmlContent, dbFile, dbNames, progressMessage, i
 
 Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
@@ -13,16 +13,25 @@ End If
 
 ' Read dbnames.txt file
 Set dbFile = fso.OpenTextFile("dbnames.txt", ForReading)
+dbNames = Split(dbFile.ReadAll, vbCrLf)
+dbFile.Close
 
 ' Start HTML content
 htmlContent = "<html><body><table border='1'><tr><th>DB Name</th><th>HOST</th><th>PORT</th><th>HOST IP</th></tr>"
 
-Do Until dbFile.AtEndOfStream
-    dbName = dbFile.ReadLine
+For i = 0 To UBound(dbNames)
+    dbName = dbNames(i)
 
-    ' Show progress
-    Set progressBox = CreateObject("WScript.Shell")
-    progressBox.Popup "Processing: " & dbName, 2, "Progress", 64
+    ' Update and show progress
+    progressMessage = "Processing Databases:" & vbCrLf
+    For j = 0 To UBound(dbNames)
+        If j = i Then
+            progressMessage = progressMessage & dbNames(j) & " ******" & vbCrLf
+        Else
+            progressMessage = progressMessage & dbNames(j) & vbCrLf
+        End If
+    Next
+    shell.Popup progressMessage, 2, "Progress", 64
 
     ' Executing tnsping
     Set tnspingExec = shell.Exec("tnsping " & dbName)
@@ -37,21 +46,18 @@ Do Until dbFile.AtEndOfStream
         Set nslookupExec = shell.Exec("cmd /c nslookup " & host)
         nslookupOutput = nslookupExec.StdOut.ReadAll()
 
-        ' Parsing the nslookup output to find the second IP address
-        ip = ParseIP(nslookupOutput)
+        ' Parsing the nslookup output to find IP addresses
+        ip = ParseIPs(nslookupOutput)
     Else
         ip = "Host not found"
     End If
 
     ' Adding row to HTML content
     htmlContent = htmlContent & "<tr><td>" & dbName & "</td><td>" & host & "</td><td>" & port & "</td><td>" & ip & "</td></tr>"
-Loop
+Next
 
 ' Finish HTML content
 htmlContent = htmlContent & "</table></body></html>"
-
-' Close dbnames.txt
-dbFile.Close
 
 ' Writing to an HTML file
 Dim htmlFile
@@ -73,19 +79,41 @@ Function ParseValue(output, key)
     Next
 End Function
 
-Function ParseIP(output)
-    Dim lines, line, ipCount
+Function ParseIPs(output)
+    Dim lines, line, foundNonAuthAnswer, ipList, isMultiple
     lines = Split(output, vbCrLf)
-    ParseIP = ""
-    ipCount = 0
+    ParseIPs = ""
+    foundNonAuthAnswer = False
+    isMultiple = False
 
     For Each line in lines
-        If InStr(line, "Address:") > 0 Then
-            ipCount = ipCount + 1
-            If ipCount = 2 Then ' Get the second IP
-                ParseIP = Trim(Mid(line, InStr(line, "Address:") + 9))
-                Exit Function
+        If InStr(line, "Non-authoritative answer") > 0 Then
+            foundNonAuthAnswer = True
+        End If
+
+        If foundNonAuthAnswer Then
+            If InStr(line, "Addresses:") > 0 Then
+                isMultiple = True
+                Continue For
+            End If
+
+            If InStr(line, "Address:") > 0 Then
+                If isMultiple Then
+                    Continue For ' Skip the first Address line in multiple addresses scenario
+                Else
+                    ParseIPs = Trim(Mid(line, InStr(line, "Address:") + 9))
+                    Exit Function
+                End If
+            End If
+
+            If isMultiple And Trim(line) <> "" And InStr(line, ":") = 0 Then
+                ipList = ipList & Trim(line) & ", "
             End If
         End If
     Next
+
+    If isMultiple And Len(ipList) > 0 Then
+        ' Remove trailing comma and space
+        ParseIPs = Left(ipList, Len(ipList) - 2)
+    End If
 End Function
