@@ -1,6 +1,6 @@
 Const ForReading = 1
 Const ForWriting = 2
-Dim shell, fso, tnspingOutput, nslookupOutput, dbName, host, port, ip, htmlContent, dbFile, dbNames, progressMessage, i, fileName
+Dim shell, fso, tnspingOutput, nslookupOutput, dbName, host, port, ip, htmlContent, dbFile, dbNames, progressMessage, i, fileName, dbSet
 
 Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
@@ -15,16 +15,34 @@ For Each fileName In Array("griffinDBnames.txt", "griffinAnalyticsDBnames.txt")
         WScript.Quit
     End If
 
+    ' Initialize a dictionary to track unique db names
+    Set dbSet = CreateObject("Scripting.Dictionary")
+
     ' Read dbnames file
     Set dbFile = fso.OpenTextFile(fileName, ForReading)
     dbNames = Split(dbFile.ReadAll, vbCrLf)
     dbFile.Close
 
-    ' Add table header
+    ' Validate and filter dbNames
+    For i = LBound(dbNames) To UBound(dbNames)
+        dbName = Trim(dbNames(i))
+        If Len(dbName) = 0 Then
+            WScript.Echo "Empty or blank line found in " & fileName & "."
+            WScript.Quit
+        ElseIf dbSet.Exists(dbName) Then
+            WScript.Echo "Duplicate DB name found: " & dbName & " in " & fileName & "."
+            WScript.Quit
+        Else
+            dbSet.Add dbName, True
+        End If
+    Next
+
+    ' Add table title and header
+    htmlContent = htmlContent & "<h3>" & fileName & "</h3>"
     htmlContent = htmlContent & "<table id='" & fileName & "' border='1'><tr><th>DB Name</th><th>HOST</th><th>PORT</th><th>HOST IP</th></tr>"
 
-    For i = 0 To UBound(dbNames)
-        dbName = dbNames(i)
+    ' Process each dbName
+    For Each dbName In dbSet.Keys
 
         ' Update and show progress
         progressMessage = "Processing " & fileName & ": " & vbCrLf & dbName & " ******" & vbCrLf
