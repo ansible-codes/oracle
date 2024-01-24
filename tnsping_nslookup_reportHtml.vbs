@@ -61,7 +61,7 @@ htmlContent = htmlContent & "</table></body></html>"
 
 ' Writing to an HTML file
 Dim htmlFile
-Set htmlFile = fso.OpenTextFile("output.html", ForWriting, True)
+Set htmlFile = fso.OpenTextFile("tnsping_nslookup_report_output.html", ForWriting, True)
 htmlFile.Write(htmlContent)
 htmlFile.Close
 
