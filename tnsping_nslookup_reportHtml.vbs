@@ -1,6 +1,6 @@
 Const ForReading = 1
 Const ForWriting = 2
-Dim shell, fso, tnspingOutput, nslookupOutput, dbName, host, ip, htmlContent, dbFile, dbLine
+Dim shell, fso, tnspingOutput, nslookupOutput, dbName, host, ip, htmlContent, dbFile, progressBox
 
 Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
@@ -20,19 +20,26 @@ htmlContent = "<html><body><table border='1'><tr><th>DB Name</th><th>HOST</th><t
 Do Until dbFile.AtEndOfStream
     dbName = dbFile.ReadLine
 
+    ' Show progress
+    Set progressBox = CreateObject("WScript.Shell")
+    progressBox.Popup "Processing: " & dbName, 2, "Progress", 64
+
     ' Executing tnsping
     Set tnspingExec = shell.Exec("tnsping " & dbName)
     tnspingOutput = tnspingExec.StdOut.ReadAll()
 
     ' Parsing the tnsping output to find HOST
     host = ParseHost(tnspingOutput)
+    If host <> "" Then
+        ' Executing nslookup
+        Set nslookupExec = shell.Exec("cmd /c nslookup " & host)
+        nslookupOutput = nslookupExec.StdOut.ReadAll()
 
-    ' Executing nslookup
-    Set nslookupExec = shell.Exec("nslookup " & host)
-    nslookupOutput = nslookupExec.StdOut.ReadAll()
-
-    ' Parsing the nslookup output to find IP address
-    ip = ParseIP(nslookupOutput)
+        ' Parsing the nslookup output to find the second IP address
+        ip = ParseIP(nslookupOutput)
+    Else
+        ip = "Host not found"
+    End If
 
     ' Adding row to HTML content
     htmlContent = htmlContent & "<tr><td>" & dbName & "</td><td>" & host & "</td><td>" & ip & "</td></tr>"
@@ -65,13 +72,18 @@ Function ParseHost(output)
 End Function
 
 Function ParseIP(output)
-    Dim lines, line
+    Dim lines, line, ipCount
     lines = Split(output, vbCrLf)
     ParseIP = ""
+    ipCount = 0
+
     For Each line in lines
         If InStr(line, "Address:") > 0 Then
-            ParseIP = Trim(Mid(line, InStr(line, "Address:") + 9))
-            Exit Function
+            ipCount = ipCount + 1
+            If ipCount = 2 Then ' Get the second IP
+                ParseIP = Trim(Mid(line, InStr(line, "Address:") + 9))
+                Exit Function
+            End If
         End If
     Next
 End Function
