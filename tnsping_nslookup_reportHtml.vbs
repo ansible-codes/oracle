@@ -1,6 +1,6 @@
 Const ForReading = 1
 Const ForWriting = 2
-Dim shell, fso, tnspingOutput, nslookupOutput, dbName, host, ip, htmlContent, dbFile, progressBox
+Dim shell, fso, tnspingOutput, nslookupOutput, dbName, host, port, ip, htmlContent, dbFile, progressBox
 
 Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
@@ -15,7 +15,7 @@ End If
 Set dbFile = fso.OpenTextFile("dbnames.txt", ForReading)
 
 ' Start HTML content
-htmlContent = "<html><body><table border='1'><tr><th>DB Name</th><th>HOST</th><th>HOST IP</th></tr>"
+htmlContent = "<html><body><table border='1'><tr><th>DB Name</th><th>HOST</th><th>PORT</th><th>HOST IP</th></tr>"
 
 Do Until dbFile.AtEndOfStream
     dbName = dbFile.ReadLine
@@ -28,8 +28,10 @@ Do Until dbFile.AtEndOfStream
     Set tnspingExec = shell.Exec("tnsping " & dbName)
     tnspingOutput = tnspingExec.StdOut.ReadAll()
 
-    ' Parsing the tnsping output to find HOST
-    host = ParseHost(tnspingOutput)
+    ' Parsing the tnsping output to find HOST and PORT
+    host = ParseValue(tnspingOutput, "HOST=")
+    port = ParseValue(tnspingOutput, "PORT=")
+
     If host <> "" Then
         ' Executing nslookup
         Set nslookupExec = shell.Exec("cmd /c nslookup " & host)
@@ -42,7 +44,7 @@ Do Until dbFile.AtEndOfStream
     End If
 
     ' Adding row to HTML content
-    htmlContent = htmlContent & "<tr><td>" & dbName & "</td><td>" & host & "</td><td>" & ip & "</td></tr>"
+    htmlContent = htmlContent & "<tr><td>" & dbName & "</td><td>" & host & "</td><td>" & port & "</td><td>" & ip & "</td></tr>"
 Loop
 
 ' Finish HTML content
@@ -57,15 +59,15 @@ Set htmlFile = fso.OpenTextFile("output.html", ForWriting, True)
 htmlFile.Write(htmlContent)
 htmlFile.Close
 
-Function ParseHost(output)
+Function ParseValue(output, key)
     Dim lines, line, startPos, endPos
     lines = Split(output, vbCrLf)
-    ParseHost = ""
+    ParseValue = ""
     For Each line in lines
-        If InStr(line, "HOST=") > 0 Then
-            startPos = InStr(line, "HOST=") + 5
+        If InStr(line, key) > 0 Then
+            startPos = InStr(line, key) + Len(key)
             endPos = InStr(startPos, line, ")") - startPos
-            ParseHost = Mid(line, startPos, endPos)
+            ParseValue = Mid(line, startPos, endPos)
             Exit Function
         End If
     Next
