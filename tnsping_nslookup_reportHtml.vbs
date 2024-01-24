@@ -46,8 +46,8 @@ For i = 0 To UBound(dbNames)
         Set nslookupExec = shell.Exec("cmd /c nslookup " & host)
         nslookupOutput = nslookupExec.StdOut.ReadAll()
 
-        ' Parsing the nslookup output to find IP addresses
-        ip = ParseIPs(nslookupOutput)
+        ' Parsing the nslookup output to find the second IP address
+        ip = ParseSecondIP(nslookupOutput)
     Else
         ip = "Host not found"
     End If
@@ -61,7 +61,7 @@ htmlContent = htmlContent & "</table></body></html>"
 
 ' Writing to an HTML file
 Dim htmlFile
-Set htmlFile = fso.OpenTextFile("tnsping_nslookup_report_output.html", ForWriting, True)
+Set htmlFile = fso.OpenTextFile("output.html", ForWriting, True)
 htmlFile.Write(htmlContent)
 htmlFile.Close
 
@@ -79,24 +79,19 @@ Function ParseValue(output, key)
     Next
 End Function
 
-Function ParseIPs(output)
-    Dim lines, line, foundNonAuthAnswer, ipList
+Function ParseSecondIP(output)
+    Dim lines, line, addressCount
     lines = Split(output, vbCrLf)
-    ParseIPs = ""
-    foundNonAuthAnswer = False
+    ParseSecondIP = ""
+    addressCount = 0
 
     For Each line in lines
-        If InStr(line, "Non-authoritative answer") > 0 Then
-            foundNonAuthAnswer = True
-        ElseIf foundNonAuthAnswer Then
-            If InStr(line, "Address:") > 0 Then
-                ipList = ipList & Trim(Mid(line, InStr(line, "Address:") + 9)) & ", "
+        If InStr(line, "Address:") > 0 Then
+            addressCount = addressCount + 1
+            If addressCount = 2 Then
+                ParseSecondIP = Trim(Mid(line, InStr(line, "Address:") + 9))
+                Exit Function
             End If
         End If
     Next
-
-    If Len(ipList) > 0 Then
-        ' Remove trailing comma and space
-        ParseIPs = Left(ipList, Len(ipList) - 2)
-    End If
 End Function
